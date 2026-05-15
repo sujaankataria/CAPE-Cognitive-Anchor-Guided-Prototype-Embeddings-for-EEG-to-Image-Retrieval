@@ -1,0 +1,106 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Raw and processed datasets
+data/things_eeg2/preprocessed_data/**
+data/things_eeg2/image_set/training_images/**
+data/things_eeg2/image_set/test_images/**
+data/things_eeg2/raw_data/**
+data/things_eeg2/source_data/**
+data/things_eeg2/dnn_feature_maps/**
+
+# Keep empty data folders trackable
+!data/things_eeg2/preprocessed_data/
+!data/things_eeg2/preprocessed_data/sub-01/
+!data/things_eeg2/preprocessed_data/sub-01/.gitkeep
+!data/things_eeg2/preprocessed_data/sub-02/
+!data/things_eeg2/preprocessed_data/sub-02/.gitkeep
+!data/things_eeg2/image_set/
+!data/things_eeg2/image_set/training_images/
+!data/things_eeg2/image_set/training_images/.gitkeep
+!data/things_eeg2/image_set/test_images/
+!data/things_eeg2/image_set/test_images/.gitkeep
+
+# Generated embeddings
+embeddings/clip/**
+embeddings/anchors/**
+embeddings/eeg/cached_eeg_embeddings/**
+
+!embeddings/clip/
+!embeddings/clip/.gitkeep
+!embeddings/anchors/
+!embeddings/anchors/.gitkeep
+!embeddings/eeg/
+!embeddings/eeg/cached_eeg_embeddings/
+!embeddings/eeg/cached_eeg_embeddings/.gitkeep
+
+# Model outputs and experiment artifacts
+results/checkpoints/**
+results/logs/**
+results/retrieval_outputs/**
+results/figures/**
+results/tables/**
+
+!results/checkpoints/
+!results/checkpoints/.gitkeep
+!results/logs/
+!results/logs/.gitkeep
+!results/retrieval_outputs/
+!results/retrieval_outputs/.gitkeep
+!results/figures/
+!results/figures/.gitkeep
+!results/tables/
+!results/tables/.gitkeep
+
+# Common ML artifacts
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.npy
+*.npz
+*.mat
+*.fif
+*.edf
+*.bdf
+*.vhdr
+*.vmrk
+*.eeg
+
+# Archives and downloads
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Local scratch
+tmp/
+temp/
+scratch/

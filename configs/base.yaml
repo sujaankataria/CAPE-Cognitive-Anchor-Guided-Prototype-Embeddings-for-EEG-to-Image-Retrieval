@@ -1,0 +1,29 @@
+project:
+  name: eeg_clip_project
+  seed: 42
+
+data:
+  root: data/things_eeg2
+  preprocessed_dir: data/things_eeg2/preprocessed_data
+  image_dir: data/things_eeg2/image_set
+  metadata_dir: data/things_eeg2/metadata
+  splits_dir: data/things_eeg2/splits
+
+clip:
+  model_name: ViT-B-32
+  pretrained: openai
+  embedding_dim: 512
+  batch_size: 64
+
+training:
+  batch_size: 128
+  max_epochs: 100
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-4
+  patience: 15
+  temperature: 0.07
+
+cape:
+  alpha: 0.7
+  beta: 0.99
+  regularization_lambda: 0.001
