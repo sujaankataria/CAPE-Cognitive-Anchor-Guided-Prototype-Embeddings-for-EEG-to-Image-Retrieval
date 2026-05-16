@@ -1,0 +1,68 @@
+CAPE Dataset Inspection
+========================
+Project root: C:\Users\sujaa\Projects\EEG\eeg_clip_project
+Subject: sub-01
+
+Subject directory: C:\Users\sujaa\Projects\EEG\eeg_clip_project\data\things_eeg2\preprocessed_data\sub-01
+
+Training EEG:
+  type: dict
+  shape: unavailable for dict/object mapping
+  keys (3): ['preprocessed_eeg_data', 'ch_names', 'times']
+  preprocessed_eeg_data shape: (16540, 4, 17, 100)
+  preprocessed_eeg_data dtype: float64
+  preprocessed_eeg_data shape interpretation: Likely images x repetitions x channels x time.
+  preprocessed_eeg_data min: -328.758
+  preprocessed_eeg_data max: 85.1462
+  preprocessed_eeg_data mean: -0.0350361
+  preprocessed_eeg_data std: 0.840087
+  ch_names: list length=17, first 5=['Pz', 'P3', 'P7', 'O1', 'Oz']
+  times shape: (100,)
+  times dtype: float64
+  times shape interpretation: Other structure: 1 dimensions.
+  times min: -0.2
+  times max: 0.79
+  times mean: 0.295
+  times std: 0.288661
+
+Test EEG:
+  type: dict
+  shape: unavailable for dict/object mapping
+  keys (3): ['preprocessed_eeg_data', 'ch_names', 'times']
+  preprocessed_eeg_data shape: (200, 80, 17, 100)
+  preprocessed_eeg_data dtype: float64
+  preprocessed_eeg_data shape interpretation: Likely images x repetitions x channels x time.
+  preprocessed_eeg_data min: -41.1398
+  preprocessed_eeg_data max: 32.9373
+  preprocessed_eeg_data mean: -0.0337081
+  preprocessed_eeg_data std: 0.756601
+  ch_names: list length=17, first 5=['Pz', 'P3', 'P7', 'O1', 'Oz']
+  times shape: (100,)
+  times dtype: float64
+  times shape interpretation: Other structure: 1 dimensions.
+  times min: -0.2
+  times max: 0.79
+  times mean: 0.295
+  times std: 0.288661
+
+Metadata file: C:\Users\sujaa\Projects\EEG\eeg_clip_project\data\things_eeg2\metadata\image_metadata.npy
+Metadata:
+  type: dict
+  shape: unavailable for dict/object mapping
+  keys (6): ['test_img_concepts', 'test_img_concepts_THINGS', 'test_img_files', 'train_img_files', 'train_img_concepts', 'train_img_concepts_THINGS']
+  first entries:
+    'test_img_concepts': list length=200, first 5=['00001_aircraft_carrier', '00002_antelope', '00003_backscratcher', '00004_balance_beam',
+ '00005_banana']
+    'test_img_concepts_THINGS': list length=200, first 5=['00010_aircraft_carrier', '00027_antelope', '00051_backscratcher', '00059_balance_beam',
+ '00064_banana']
+    'test_img_files': list length=200, first 5=['aircraft_carrier_06s.jpg', 'antelope_01b.jpg', 'backscratcher_01b.jpg', 'balance_beam_04s.jpg',
+ 'banana_09s.jpg']
+    'train_img_files': list length=16540, first 5=['aardvark_01b.jpg', 'aardvark_02s.jpg', 'aardvark_03s.jpg', 'aardvark_04s.jpg', 'aardvark_05s.jpg']
+    'train_img_concepts': list length=16540, first 5=['00001_aardvark', '00001_aardvark', '00001_aardvark', '00001_aardvark', '00001_aardvark']
+
+Image set:
+  training image files: 16540
+  training class/category directories: 1654
+  test image files: 200
+  test class/category directories: 200
+

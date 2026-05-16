@@ -22,6 +22,7 @@ ENV/
 .vscode/
 .DS_Store
 Thumbs.db
+AGENTS.md
 
 # Jupyter
 .ipynb_checkpoints/
