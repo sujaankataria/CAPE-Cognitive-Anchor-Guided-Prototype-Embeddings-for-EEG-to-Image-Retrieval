@@ -33,6 +33,7 @@ data/things_eeg2/image_set/test_images/**
 data/things_eeg2/raw_data/**
 data/things_eeg2/source_data/**
 data/things_eeg2/dnn_feature_maps/**
+data/things_eeg2/splits/**
 
 # Keep empty data folders trackable
 !data/things_eeg2/preprocessed_data/
@@ -45,6 +46,8 @@ data/things_eeg2/dnn_feature_maps/**
 !data/things_eeg2/image_set/training_images/.gitkeep
 !data/things_eeg2/image_set/test_images/
 !data/things_eeg2/image_set/test_images/.gitkeep
+!data/things_eeg2/splits/
+!data/things_eeg2/splits/.gitkeep
 
 # Generated embeddings
 embeddings/clip/**
@@ -60,12 +63,9 @@ embeddings/eeg/cached_eeg_embeddings/**
 !embeddings/eeg/cached_eeg_embeddings/.gitkeep
 
 # Model outputs and experiment artifacts
-results/checkpoints/**
-results/logs/**
-results/retrieval_outputs/**
-results/figures/**
-results/tables/**
+results/**
 
+!results/
 !results/checkpoints/
 !results/checkpoints/.gitkeep
 !results/logs/
