@@ -25,6 +25,17 @@ from utils.seed import set_seed
 SPLITS_ROOT = PROJECT_ROOT / "data" / "things_eeg2" / "splits"
 
 
+def parse_subjects(value: str | None) -> list[str] | None:
+    if value is None:
+        return None
+    if value.lower() == "all":
+        return None
+    subjects = [part.strip() for part in value.split(",") if part.strip()]
+    if not subjects:
+        raise ValueError("Subject list must not be empty")
+    return subjects
+
+
 def split_csv_path(split: str) -> Path:
     if split not in {"train", "val", "test"}:
         raise ValueError(f"Unsupported split: {split}")
@@ -66,7 +77,7 @@ def run_smoke_step(
             temperature=temperature,
             symmetric=True,
         )
-    elif objective == "anchor":
+    elif objective in {"anchor", "prototype"}:
         anchor_embeddings = dataset.anchor_embeddings
         if anchor_embeddings is None:
             raise ValueError("Anchor objective requires anchor embeddings")
@@ -115,14 +126,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--split", choices=["train", "val", "test"], default="train")
     parser.add_argument("--val-split", choices=["train", "val", "test"], default="val")
     parser.add_argument("--subject", default="sub-01")
+    parser.add_argument("--train-subjects", default=None, help="Comma-separated train subjects, or all.")
+    parser.add_argument("--val-subjects", default=None, help="Comma-separated validation subjects, or all.")
     parser.add_argument("--limit", type=int, default=32)
     parser.add_argument("--limit-train", type=int, default=None)
     parser.add_argument("--limit-val", type=int, default=None)
+    parser.add_argument("--limit-train-per-subject", type=int, default=None)
+    parser.add_argument("--limit-val-per-subject", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--objective", choices=["direct", "anchor"], default="direct")
+    parser.add_argument("--objective", choices=["direct", "anchor", "prototype"], default="direct")
     parser.add_argument("--learning-rate", type=float, default=1.0e-4)
     parser.add_argument("--weight-decay", type=float, default=1.0e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
+    parser.add_argument("--prototype-alpha", type=float, default=0.7)
+    parser.add_argument("--prototype-beta", type=float, default=0.99)
     parser.add_argument("--max-epochs", type=int, default=3)
     parser.add_argument("--patience", type=int, default=2)
     parser.add_argument("--seed", type=int, default=42)
@@ -136,6 +153,8 @@ def main() -> None:
     set_seed(args.seed)
 
     if args.smoke_step:
+        if args.train_subjects is not None or args.val_subjects is not None:
+            raise ValueError("--smoke-step uses --subject; train/val subject lists are for full training.")
         report = run_smoke_step(
             split=args.split,
             subject=args.subject,
@@ -149,17 +168,21 @@ def main() -> None:
         return
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    train_subjects = parse_subjects(args.train_subjects) if args.train_subjects is not None else [args.subject]
+    val_subjects = parse_subjects(args.val_subjects) if args.val_subjects is not None else [args.subject]
     train_dataset = EEGCLIPPairDataset(
         split_csv_path(args.split),
         split=args.split,
-        subject=args.subject,
+        subject=train_subjects,
         limit=args.limit_train,
+        limit_per_subject=args.limit_train_per_subject,
     )
     val_dataset = EEGCLIPPairDataset(
         split_csv_path(args.val_split),
         split=args.val_split,
-        subject=args.subject,
+        subject=val_subjects,
         limit=args.limit_val,
+        limit_per_subject=args.limit_val_per_subject,
     )
     trainer = Trainer(
         EEGCLIPModel(),
@@ -175,6 +198,8 @@ def main() -> None:
             batch_size=args.batch_size,
             patience=args.patience,
             num_workers=args.num_workers,
+            prototype_alpha=args.prototype_alpha,
+            prototype_beta=args.prototype_beta,
             overwrite_existing=args.overwrite_existing,
         ),
         device,
@@ -183,6 +208,8 @@ def main() -> None:
     report.update(
         {
             "subject": args.subject,
+            "train_subjects": train_subjects,
+            "val_subjects": val_subjects,
             "train_split": args.split,
             "val_split": args.val_split,
             "train_rows": len(train_dataset),

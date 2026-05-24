@@ -103,6 +103,54 @@ Validate training wiring with one optimizer step:
 The direct objective uses multi-positive image IDs so repeated EEG trials of the
 same image are not treated as negatives for each other.
 
+The training entrypoint currently supports three objectives:
+
+- `direct`: direct EEG-image contrastive alignment
+- `anchor`: uniform category-anchor contrastive alignment
+- `prototype`: category-anchor alignment with EMA dynamic EEG prototypes
+
+Run the dynamic prototype baseline with:
+
+```powershell
+.\.venv\Scripts\python.exe training\train.py --experiment-id EXP-003 --split train --val-split val --subject sub-01 --batch-size 128 --max-epochs 100 --patience 15 --objective prototype --learning-rate 0.0001 --weight-decay 0.0001 --temperature 0.07 --prototype-alpha 0.7 --prototype-beta 0.99 --seed 42
+```
+
+Evaluate a saved checkpoint on the official test split with:
+
+```powershell
+.\.venv\Scripts\python.exe training\validate.py --split test --subject sub-01 --batch-size 128 --checkpoint results\checkpoints\EXP-003\best.pt
+```
+
+For subject-independent runs, pass comma-separated subject lists. This trains on
+sub-01 through sub-03 and validates on held-out sub-10:
+
+```powershell
+.\.venv\Scripts\python.exe training\train.py --experiment-id EXP-005 --split train --val-split val --train-subjects sub-01,sub-02,sub-03 --val-subjects sub-10 --batch-size 128 --max-epochs 100 --patience 15 --objective direct --learning-rate 0.0001 --weight-decay 0.0001 --temperature 0.07 --seed 42
+```
+
+Bounded multi-subject sanity checks should use per-subject limits to avoid
+accidentally sampling only the first subject:
+
+```powershell
+.\.venv\Scripts\python.exe training\train.py --experiment-id EXP-005-SANITY-BALANCED --split train --val-split val --train-subjects sub-01,sub-02 --val-subjects sub-10 --limit-train-per-subject 128 --limit-val-per-subject 128 --batch-size 32 --max-epochs 2 --patience 2 --objective direct --overwrite-existing
+```
+
+Train the EEG classification baseline with:
+
+```powershell
+.\.venv\Scripts\python.exe training\train_classifier.py --experiment-id EXP-004 --split train --val-split val --subject sub-01 --batch-size 128 --max-epochs 100 --patience 15 --learning-rate 0.0001 --weight-decay 0.0001 --seed 42
+```
+
+This baseline trains an EEGNet classifier over the 1654 training categories.
+For retrieval, classifier probabilities are multiplied by the uniform category
+anchors to form a CLIP-space query. Official test classification accuracy is not
+reported because official test concepts are disjoint from the training
+categories, but official test retrieval can still be evaluated:
+
+```powershell
+.\.venv\Scripts\python.exe training\train_classifier.py --eval-only --val-split test --subject sub-01 --batch-size 128 --checkpoint results\checkpoints\EXP-004\best.pt
+```
+
 Run a bounded EXP-001 sanity training job with:
 
 ```powershell

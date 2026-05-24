@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 import torch
@@ -105,13 +105,19 @@ class EEGCLIPPairDataset(Dataset):
         split_csv: Path | str,
         *,
         split: str,
-        subject: str | None = None,
+        subject: str | Sequence[str] | None = None,
         limit: int | None = None,
+        limit_per_subject: int | None = None,
         image_embeddings_path: Path | str | None = None,
         anchors_path: Path | str | None = DEFAULT_ANCHORS,
     ) -> None:
         self.split = split
-        self.eeg_dataset = EEGTrialDataset(split_csv, subject=subject, limit=limit)
+        self.eeg_dataset = EEGTrialDataset(
+            split_csv,
+            subject=subject,
+            limit=limit,
+            limit_per_subject=limit_per_subject,
+        )
         self.image_cache = load_clip_embedding_cache(
             image_embeddings_path if image_embeddings_path is not None else default_image_embedding_path_for_split(split)
         )

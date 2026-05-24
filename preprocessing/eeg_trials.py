@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
@@ -34,7 +34,23 @@ def load_npy_object(path: Path) -> Any:
     return value
 
 
-def load_split_table(path: Path, subject: str | None = None, limit: int | None = None) -> pd.DataFrame:
+def _normalize_subject_filter(subject: str | Sequence[str] | None) -> list[str] | None:
+    if subject is None:
+        return None
+    if isinstance(subject, str):
+        values = [part.strip() for part in subject.split(",")]
+    else:
+        values = [str(part).strip() for part in subject]
+    subjects = [value for value in values if value]
+    return subjects or None
+
+
+def load_split_table(
+    path: Path,
+    subject: str | Sequence[str] | None = None,
+    limit: int | None = None,
+    limit_per_subject: int | None = None,
+) -> pd.DataFrame:
     if not path.is_file():
         raise FileNotFoundError(f"Missing split CSV: {path}")
 
@@ -55,10 +71,16 @@ def load_split_table(path: Path, subject: str | None = None, limit: int | None =
     if missing:
         raise ValueError(f"Split table missing required columns: {sorted(missing)}")
 
-    if subject is not None:
-        table = table.loc[table["subject_id"] == subject].copy()
+    subjects = _normalize_subject_filter(subject)
+    if subjects is not None:
+        table = table.loc[table["subject_id"].isin(subjects)].copy()
         if table.empty:
-            raise ValueError(f"No rows for subject {subject!r} in {path}")
+            raise ValueError(f"No rows for subject filter {subjects!r} in {path}")
+
+    if limit_per_subject is not None:
+        if limit_per_subject <= 0:
+            raise ValueError("limit_per_subject must be positive")
+        table = table.groupby("subject_id", sort=False, group_keys=False).head(limit_per_subject).copy()
 
     if limit is not None:
         table = table.head(limit).copy()
@@ -73,12 +95,18 @@ class EEGTrialDataset(Dataset):
         self,
         split_csv: Path | str,
         *,
-        subject: str | None = None,
+        subject: str | Sequence[str] | None = None,
         limit: int | None = None,
+        limit_per_subject: int | None = None,
         dtype: torch.dtype = torch.float32,
     ) -> None:
         self.split_csv = Path(split_csv)
-        self.table = load_split_table(self.split_csv, subject=subject, limit=limit)
+        self.table = load_split_table(
+            self.split_csv,
+            subject=subject,
+            limit=limit,
+            limit_per_subject=limit_per_subject,
+        )
         self.dtype = dtype
         self._eeg_cache: dict[str, np.ndarray] = {}
         self._metadata_cache: dict[str, dict[str, Any]] = {}

@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 
 from models.losses import anchor_guided_contrastive_loss, direct_eeg_image_contrastive_loss
 from training.datasets import EEGCLIPPairDataset
+from training.prototypes import DynamicPrototypeMemory
 from training.validate import evaluate_retrieval
 
 
@@ -29,6 +30,8 @@ class TrainerConfig:
     batch_size: int = 128
     patience: int = 15
     num_workers: int = 0
+    prototype_alpha: float = 0.7
+    prototype_beta: float = 0.99
     checkpoint_dir: Path = PROJECT_ROOT / "results" / "checkpoints"
     log_dir: Path = PROJECT_ROOT / "results" / "logs"
     overwrite_existing: bool = False
@@ -58,7 +61,21 @@ class Trainer:
         self.best_metric = float("-inf")
         self.best_epoch = 0
         self.bad_epochs = 0
+        self.prototype_memory = self._build_prototype_memory()
         self._check_existing_outputs()
+
+    def _build_prototype_memory(self) -> DynamicPrototypeMemory | None:
+        if self.config.objective != "prototype":
+            return None
+        anchor_embeddings = self.train_dataset.anchor_embeddings
+        if anchor_embeddings is None:
+            raise ValueError("Prototype objective requires anchor embeddings")
+        return DynamicPrototypeMemory(
+            anchor_embeddings,
+            alpha=self.config.prototype_alpha,
+            beta=self.config.prototype_beta,
+            device=self.device,
+        )
 
     @property
     def checkpoint_root(self) -> Path:
@@ -105,7 +122,27 @@ class Trainer:
                 temperature=self.config.temperature,
             )
 
+        if self.config.objective == "prototype":
+            if self.prototype_memory is None:
+                raise ValueError("Prototype memory is not initialized")
+            effective_anchors = self.prototype_memory.effective_anchors()
+            return anchor_guided_contrastive_loss(
+                eeg_embeddings,
+                effective_anchors,
+                batch["anchor_index"].to(self.device),
+                temperature=self.config.temperature,
+            )
+
         raise ValueError(f"Unsupported objective: {self.config.objective}")
+
+    def _update_prototypes(self, batch: dict[str, Any]) -> None:
+        if self.prototype_memory is None:
+            return
+        self.model.eval()
+        with torch.inference_mode():
+            eeg_embeddings = self.model(batch["eeg"].to(self.device))
+        self.prototype_memory.update(eeg_embeddings, batch["anchor_index"].to(self.device))
+        self.model.train()
 
     def train_epoch(self) -> float:
         self.model.train()
@@ -121,6 +158,7 @@ class Trainer:
             self.optimizer.zero_grad(set_to_none=True)
             loss.backward()
             self.optimizer.step()
+            self._update_prototypes(batch)
             losses.append(float(loss.detach().item()))
         return float(sum(losses) / max(len(losses), 1))
 
@@ -148,6 +186,7 @@ class Trainer:
                     "log_dir": str(self.config.log_dir),
                 },
                 "val_metrics": val_metrics,
+                "prototype_memory": self.prototype_memory.state_dict() if self.prototype_memory is not None else None,
             },
             path,
         )
@@ -183,6 +222,7 @@ class Trainer:
                 "best_mrr": self.best_metric,
                 "improved": improved,
                 "bad_epochs": self.bad_epochs,
+                "initialized_prototypes": self.prototype_memory.num_initialized if self.prototype_memory is not None else None,
             }
             self.log_epoch(record)
             history.append(record)
@@ -197,5 +237,6 @@ class Trainer:
             "best_epoch": self.best_epoch,
             "best_mrr": self.best_metric,
             "best_checkpoint": str(best_checkpoint) if best_checkpoint is not None else None,
+            "initialized_prototypes": self.prototype_memory.num_initialized if self.prototype_memory is not None else None,
             "history": history,
         }
