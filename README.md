@@ -78,6 +78,37 @@ Current anchor cache:
 
 - `embeddings/anchors/uniform_category_anchors.npz`
 
+Build typicality-weighted category anchors only when a verified weights CSV is
+available:
+
+```powershell
+.\.venv\Scripts\python.exe preprocessing\build_anchors.py --anchor-type typicality --typicality-weights path\to\typicality_weights.csv
+```
+
+The typicality CSV must contain `image_index` and `typicality_weight` columns.
+Weights must be finite and non-negative, and every training image index must
+have one valid weight. The default weighted-anchor cache is
+`embeddings/anchors/typicality_category_anchors.npz`. Uniform anchors remain the
+default and are not overwritten by typicality runs.
+
+Generate anchor geometry visualizations and neighborhood tables with:
+
+```powershell
+.\.venv\Scripts\python.exe utils\visualization.py --anchors embeddings\anchors\uniform_category_anchors.npz --seed 42 --top-k 10
+```
+
+Current outputs:
+
+- `results/figures/anchor_tsne.png`
+- `results/figures/anchor_umap_style.png`
+- `results/tables/anchor_tsne_coordinates.csv`
+- `results/tables/anchor_umap_style_coordinates.csv`
+- `results/tables/anchor_neighborhoods.csv`
+
+The UMAP-style plot uses a deterministic nearest-neighbor spectral embedding
+fallback because `umap-learn` is not currently installed in the project
+environment.
+
 ## Model Components
 
 The default EEG encoder is implemented in `models/eegnet.py`. It accepts EEG
@@ -126,6 +157,12 @@ sub-01 through sub-03 and validates on held-out sub-10:
 
 ```powershell
 .\.venv\Scripts\python.exe training\train.py --experiment-id EXP-005 --split train --val-split val --train-subjects sub-01,sub-02,sub-03 --val-subjects sub-10 --batch-size 128 --max-epochs 100 --patience 15 --objective direct --learning-rate 0.0001 --weight-decay 0.0001 --temperature 0.07 --seed 42
+```
+
+Run the matching sub-10 subject-specific comparison with:
+
+```powershell
+.\.venv\Scripts\python.exe training\train.py --experiment-id EXP-006 --split train --val-split val --subject sub-10 --batch-size 128 --max-epochs 100 --patience 15 --objective direct --learning-rate 0.0001 --weight-decay 0.0001 --temperature 0.07 --seed 42
 ```
 
 Bounded multi-subject sanity checks should use per-subject limits to avoid
