@@ -104,3 +104,6 @@ results/**
 tmp/
 temp/
 scratch/
+
+# Local generated analysis notes
+EXPERIMENT_INFERENCES.md

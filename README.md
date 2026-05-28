@@ -159,6 +159,11 @@ sub-01 through sub-03 and validates on held-out sub-10:
 .\.venv\Scripts\python.exe training\train.py --experiment-id EXP-005 --split train --val-split val --train-subjects sub-01,sub-02,sub-03 --val-subjects sub-10 --batch-size 128 --max-epochs 100 --patience 15 --objective direct --learning-rate 0.0001 --weight-decay 0.0001 --temperature 0.07 --seed 42
 ```
 
+The completed full subject-independent sweep uses sub-01 through sub-09 for
+training and sub-10 for validation/test. Use the same subject lists with
+`--objective direct`, `--objective anchor`, or `--objective prototype` to
+reproduce EXP-007, EXP-008, or EXP-009 respectively.
+
 Run the matching sub-10 subject-specific comparison with:
 
 ```powershell
