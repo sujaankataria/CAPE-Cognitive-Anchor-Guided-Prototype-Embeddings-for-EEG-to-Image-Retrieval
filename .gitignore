@@ -107,3 +107,13 @@ scratch/
 
 # Local generated analysis notes
 EXPERIMENT_INFERENCES.md
+
+# Additional recommended ignores
+# Top-level checkpoints and model artifacts
+checkpoints/
+models/*.pt
+models/*.pth
+
+# Example or smoke outputs (small reproducible examples okay to keep separately)
+examples/
+
