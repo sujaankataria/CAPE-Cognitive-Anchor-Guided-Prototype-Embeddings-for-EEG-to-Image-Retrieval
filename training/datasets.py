@@ -79,14 +79,42 @@ def load_anchor_cache(path: Path | str) -> dict[str, Any]:
         concept_to_anchor_index = {str(concept): index for index, concept in enumerate(concepts)}
         if len(concept_to_anchor_index) != len(concepts):
             raise ValueError("Anchor concepts are not unique")
+        exemplar_image_indices = np.asarray(cache["exemplar_image_indices"], dtype=object)
+        if exemplar_image_indices.shape[0] != embeddings.shape[0]:
+            raise ValueError("Anchor exemplar metadata does not match anchor rows")
 
         return {
             "embeddings": embeddings,
             "concept": concepts,
             "concept_to_anchor_index": concept_to_anchor_index,
+            "exemplar_image_indices": exemplar_image_indices,
             "metadata": _load_npz_metadata(cache),
             "path": resolved,
         }
+
+
+def validate_anchor_image_scope(
+    anchor_cache: dict[str, Any],
+    *,
+    allowed_image_indices: set[int],
+    forbidden_image_indices: set[int],
+) -> None:
+    exemplar_groups = anchor_cache.get("exemplar_image_indices")
+    if exemplar_groups is None:
+        raise ValueError("Anchor cache does not record exemplar image indices")
+    used = {
+        int(image_index)
+        for group in exemplar_groups
+        for image_index in np.asarray(group, dtype=np.int64).reshape(-1)
+    }
+    unexpected = used - allowed_image_indices
+    missing = allowed_image_indices - used
+    forbidden = used & forbidden_image_indices
+    if unexpected or missing or forbidden:
+        raise ValueError(
+            "Anchor cache image scope is invalid: "
+            f"unexpected={len(unexpected)}, missing={len(missing)}, forbidden={len(forbidden)}"
+        )
 
 
 def default_image_embedding_path_for_split(split: str) -> Path:

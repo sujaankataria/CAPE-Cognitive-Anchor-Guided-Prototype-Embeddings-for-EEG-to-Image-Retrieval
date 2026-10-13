@@ -16,8 +16,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from models import EEGCLIPModel
-from models.losses import anchor_guided_contrastive_loss, direct_eeg_image_contrastive_loss
-from training.datasets import EEGCLIPPairDataset
+from models.losses import (
+    anchor_guided_contrastive_loss,
+    direct_eeg_image_contrastive_loss,
+    hybrid_eeg_anchor_contrastive_loss,
+)
+from training.datasets import DEFAULT_ANCHORS, EEGCLIPPairDataset
 from training.trainer import Trainer, TrainerConfig
 from utils.seed import set_seed
 
@@ -87,6 +91,21 @@ def run_smoke_step(
             batch["anchor_index"],
             temperature=temperature,
         )
+    elif objective == "hybrid":
+        anchor_embeddings = dataset.anchor_embeddings
+        if anchor_embeddings is None:
+            raise ValueError("Hybrid objective requires anchor embeddings")
+        loss = hybrid_eeg_anchor_contrastive_loss(
+            eeg_embeddings,
+            image_embeddings,
+            anchor_embeddings,
+            batch["image_index"],
+            batch["anchor_index"],
+            temperature=temperature,
+            lambda_anchor=0.2,
+            lambda_prototype=0.0,
+            symmetric=True,
+        )
     else:
         raise ValueError(f"Unsupported objective: {objective}")
 
@@ -134,16 +153,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-train-per-subject", type=int, default=None)
     parser.add_argument("--limit-val-per-subject", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--objective", choices=["direct", "anchor", "prototype"], default="direct")
+    parser.add_argument("--objective", choices=["direct", "anchor", "prototype", "hybrid"], default="direct")
     parser.add_argument("--learning-rate", type=float, default=1.0e-4)
     parser.add_argument("--weight-decay", type=float, default=1.0e-4)
     parser.add_argument("--temperature", type=float, default=0.07)
     parser.add_argument("--prototype-alpha", type=float, default=0.7)
     parser.add_argument("--prototype-beta", type=float, default=0.99)
+    parser.add_argument("--lambda-anchor", type=float, default=0.2)
+    parser.add_argument("--lambda-prototype", type=float, default=0.0)
+    parser.add_argument("--prototype-warmup-epochs", type=int, default=5)
     parser.add_argument("--max-epochs", type=int, default=3)
     parser.add_argument("--patience", type=int, default=2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--anchors-path", type=Path, default=DEFAULT_ANCHORS)
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--max-session-minutes", type=float, default=None)
     parser.add_argument("--overwrite-existing", action="store_true")
     return parser.parse_args()
 
@@ -176,6 +201,7 @@ def main() -> None:
         subject=train_subjects,
         limit=args.limit_train,
         limit_per_subject=args.limit_train_per_subject,
+        anchors_path=args.anchors_path,
     )
     val_dataset = EEGCLIPPairDataset(
         split_csv_path(args.val_split),
@@ -183,6 +209,7 @@ def main() -> None:
         subject=val_subjects,
         limit=args.limit_val,
         limit_per_subject=args.limit_val_per_subject,
+        anchors_path=args.anchors_path,
     )
     trainer = Trainer(
         EEGCLIPModel(),
@@ -200,6 +227,11 @@ def main() -> None:
             num_workers=args.num_workers,
             prototype_alpha=args.prototype_alpha,
             prototype_beta=args.prototype_beta,
+            lambda_anchor=args.lambda_anchor,
+            lambda_prototype=args.lambda_prototype,
+            prototype_warmup_epochs=args.prototype_warmup_epochs,
+            resume=args.resume,
+            max_session_minutes=args.max_session_minutes,
             overwrite_existing=args.overwrite_existing,
         ),
         device,

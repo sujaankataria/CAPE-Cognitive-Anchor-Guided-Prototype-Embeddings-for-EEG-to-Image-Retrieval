@@ -105,6 +105,55 @@ def anchor_guided_contrastive_loss(
     return F.cross_entropy(logits, labels)
 
 
+def hybrid_eeg_anchor_contrastive_loss(
+    eeg_embeddings: torch.Tensor,
+    image_embeddings: torch.Tensor,
+    anchor_embeddings: torch.Tensor,
+    target_ids: torch.Tensor,
+    target_anchor_indices: torch.Tensor,
+    *,
+    temperature: float = 0.07,
+    lambda_anchor: float = 0.2,
+    prototype_anchor_embeddings: torch.Tensor | None = None,
+    lambda_prototype: float = 0.0,
+    symmetric: bool = True,
+) -> torch.Tensor:
+    """Direct EEG-image alignment regularized by semantic anchor targets."""
+
+    if lambda_anchor < 0:
+        raise ValueError("lambda_anchor must be non-negative")
+    if lambda_prototype < 0:
+        raise ValueError("lambda_prototype must be non-negative")
+
+    direct_loss = direct_eeg_image_contrastive_loss(
+        eeg_embeddings,
+        image_embeddings,
+        target_ids=target_ids,
+        temperature=temperature,
+        symmetric=symmetric,
+    )
+    anchor_loss = anchor_guided_contrastive_loss(
+        eeg_embeddings,
+        anchor_embeddings,
+        target_anchor_indices,
+        temperature=temperature,
+    )
+    total = direct_loss + lambda_anchor * anchor_loss
+
+    if lambda_prototype > 0:
+        if prototype_anchor_embeddings is None:
+            raise ValueError("prototype_anchor_embeddings are required when lambda_prototype > 0")
+        prototype_loss = anchor_guided_contrastive_loss(
+            eeg_embeddings,
+            prototype_anchor_embeddings,
+            target_anchor_indices,
+            temperature=temperature,
+        )
+        total = total + lambda_prototype * prototype_loss
+
+    return total
+
+
 class DirectEEGImageContrastiveLoss(nn.Module):
     def __init__(self, temperature: float = 0.07, symmetric: bool = True) -> None:
         super().__init__()
@@ -142,4 +191,41 @@ class AnchorGuidedContrastiveLoss(nn.Module):
             anchor_embeddings,
             target_anchor_indices,
             temperature=self.temperature,
+        )
+
+
+class HybridEEGAnchorContrastiveLoss(nn.Module):
+    def __init__(
+        self,
+        temperature: float = 0.07,
+        lambda_anchor: float = 0.2,
+        lambda_prototype: float = 0.0,
+        symmetric: bool = True,
+    ) -> None:
+        super().__init__()
+        self.temperature = temperature
+        self.lambda_anchor = lambda_anchor
+        self.lambda_prototype = lambda_prototype
+        self.symmetric = symmetric
+
+    def forward(
+        self,
+        eeg_embeddings: torch.Tensor,
+        image_embeddings: torch.Tensor,
+        anchor_embeddings: torch.Tensor,
+        target_ids: torch.Tensor,
+        target_anchor_indices: torch.Tensor,
+        prototype_anchor_embeddings: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        return hybrid_eeg_anchor_contrastive_loss(
+            eeg_embeddings,
+            image_embeddings,
+            anchor_embeddings,
+            target_ids,
+            target_anchor_indices,
+            temperature=self.temperature,
+            lambda_anchor=self.lambda_anchor,
+            prototype_anchor_embeddings=prototype_anchor_embeddings,
+            lambda_prototype=self.lambda_prototype,
+            symmetric=self.symmetric,
         )

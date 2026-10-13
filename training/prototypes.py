@@ -74,3 +74,25 @@ class DynamicPrototypeMemory:
             "alpha": self.alpha,
             "beta": self.beta,
         }
+
+    def load_state_dict(self, state: dict[str, torch.Tensor | float]) -> None:
+        anchor_embeddings = state["anchor_embeddings"]
+        prototype_embeddings = state["prototype_embeddings"]
+        initialized = state["initialized"]
+        if not isinstance(anchor_embeddings, torch.Tensor):
+            raise TypeError("Prototype anchor_embeddings must be a tensor")
+        if not isinstance(prototype_embeddings, torch.Tensor):
+            raise TypeError("Prototype prototype_embeddings must be a tensor")
+        if not isinstance(initialized, torch.Tensor):
+            raise TypeError("Prototype initialized flags must be a tensor")
+        if anchor_embeddings.shape != self.anchor_embeddings.shape:
+            raise ValueError("Prototype anchor shape does not match the current run")
+        if prototype_embeddings.shape != self.prototype_embeddings.shape:
+            raise ValueError("Prototype embedding shape does not match the current run")
+        if initialized.shape != self.initialized.shape:
+            raise ValueError("Prototype initialization flags do not match the current run")
+        self.anchor_embeddings.copy_(anchor_embeddings.to(self.device))
+        self.prototype_embeddings.copy_(prototype_embeddings.to(self.device))
+        self.initialized.copy_(initialized.to(self.device, dtype=torch.bool))
+        self.alpha = float(state["alpha"])
+        self.beta = float(state["beta"])
